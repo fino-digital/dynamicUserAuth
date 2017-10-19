@@ -1,0 +1,1 @@
+Dynamic user auth for labstack.echo
