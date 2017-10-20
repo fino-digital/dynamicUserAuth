@@ -6,9 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/TobiEiss/dynamicUserAuth"
 	"github.com/labstack/echo"
-	"gitlab.com/fino/finnbroker/core/auth"
-	"gitlab.com/fino/finnbroker/finnMiddleware"
 )
 
 func TestAuthMiddleware(t *testing.T) {
@@ -22,14 +21,14 @@ func TestAuthMiddleware(t *testing.T) {
 	defer testServer.Close()
 
 	// build up a testStrategy
-	testStrategy := auth.Strategy{
+	testStrategy := dynamicUserAuth.Strategy{
 		AuthorizeUser: func(c echo.Context) error {
 			return nil
 		},
 	}
 
 	// new middleware
-	authMiddleware := finnMiddleware.NewAuthMiddleware(&auth.FinnAuth{Stragegies: auth.Stragegies{host: &testStrategy}})
+	authMiddleware := dynamicUserAuth.NewAuthMiddleware(&dynamicUserAuth.DynamicUserAuth{Stragegies: dynamicUserAuth.Stragegies{host: &testStrategy}})
 
 	// build request
 	router := echo.New()
