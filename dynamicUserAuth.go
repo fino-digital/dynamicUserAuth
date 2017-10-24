@@ -9,7 +9,7 @@ import (
 
 // Stragegies is the map of pointer for strategies.
 // key: host, value: strategy
-type Stragegies map[string]*Strategy
+type Stragegies map[string]Strategy
 
 // DynamicUserAuth holds all stragegies for different products.
 // Expand this for new products.
