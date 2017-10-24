@@ -2,6 +2,7 @@ package dynamicUserAuth
 
 import (
 	"errors"
+	"reflect"
 
 	"github.com/labstack/echo"
 )
@@ -17,10 +18,25 @@ type DynamicUserAuth struct {
 	Stragegies Stragegies
 }
 
+// StrategyField describes a field for input or output of a strategie
+type StrategyField struct {
+	reflect.Type
+	Description string
+	Required    bool
+}
+
+// StrategyFunction can be for example "newUser"
+type StrategyFunction struct {
+	Description string
+	Input       map[string]StrategyField
+	Output      map[string]StrategyField
+	Resolve     func(map[string]StrategyField) (map[string]StrategyField, error)
+}
+
 // Strategy represent a strategy for one product.
 // Implement a new strategy for a new product
 type Strategy struct {
-	NewUser       echo.HandlerFunc
+	Functions     map[string]StrategyFunction
 	AuthorizeUser echo.HandlerFunc
 }
 
