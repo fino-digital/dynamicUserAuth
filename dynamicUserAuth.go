@@ -30,7 +30,7 @@ type StrategyFunction struct {
 	Description string
 	Input       map[string]StrategyField
 	Output      map[string]StrategyField
-	Resolve     func(map[string]StrategyField) (interface{}, error)
+	Resolve     func(echo.Context, map[string]interface{}) (interface{}, error)
 }
 
 // Strategy represent a strategy for one product.

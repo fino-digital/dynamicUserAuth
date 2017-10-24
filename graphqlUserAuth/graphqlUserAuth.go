@@ -69,14 +69,7 @@ func generateFields(strategies dynamicUserAuth.Stragegies, c echo.Context) graph
 			Args:        generateArgs(value.Input),
 			Description: value.Description,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				inputFields := map[string]dynamicUserAuth.StrategyField{}
-				for inputKey, inputValue := range value.Input {
-					field := p.Args[inputKey].(dynamicUserAuth.StrategyField)
-					field.Description = inputValue.Description
-					field.Required = inputValue.Required
-					inputFields[inputKey] = field
-				}
-				return value.Resolve(inputFields)
+				return value.Resolve(c, p.Args)
 			},
 		}
 	}
