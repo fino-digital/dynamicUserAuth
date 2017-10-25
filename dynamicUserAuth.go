@@ -36,13 +36,20 @@ type StrategyFunction struct {
 // Strategy represent a strategy for one product.
 // Implement a new strategy for a new product
 type Strategy struct {
-	Functions     map[string]StrategyFunction
-	AuthorizeUser echo.HandlerFunc
+	Functions      map[string]StrategyFunction
+	AuthorizeUser  echo.HandlerFunc
+	AllowedAddrSet map[string]struct{}
 }
 
 // AuthMiddleware is the middleare for all auth-stuff.
 type AuthMiddleware struct {
 	dynamicUserAuth *DynamicUserAuth
+}
+
+// WithoutAuth checks if there is an address wich is allowed to pass without handle-check
+func (strategy *Strategy) WithoutAuth(remoteAddr string) bool {
+	_, ok := strategy.AllowedAddrSet[remoteAddr]
+	return ok
 }
 
 // NewAuthMiddleware creates a new authMiddleware.
@@ -60,8 +67,10 @@ func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 		// If-else-construct is confused (`return next(context)` should be at the end).
 		// - If you find a better way, plz go for it!
 		if strategy, ok := authMiddleware.dynamicUserAuth.Stragegies[host]; ok {
-			if err := strategy.AuthorizeUser(context); err != nil {
-				return err
+			if !strategy.WithoutAuth(context.Request().RemoteAddr) {
+				if err := strategy.AuthorizeUser(context); err != nil {
+					return err
+				}
 			}
 			return next(context)
 		}
