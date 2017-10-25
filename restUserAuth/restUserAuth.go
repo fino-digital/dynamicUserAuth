@@ -11,7 +11,8 @@ import (
 
 // AuthRest is the instance for Auth-REST-impl
 type AuthRest struct {
-	UserAuth dynamicUserAuth.DynamicUserAuth
+	UserAuth    dynamicUserAuth.DynamicUserAuth
+	IgnoreRoute string
 }
 
 // Handle handles all functions dynamic by host
@@ -24,7 +25,8 @@ func (authRest *AuthRest) Handle(context echo.Context) error {
 	}
 
 	// find correct function
-	path := strings.Replace(context.Request().URL.String(), "/", "", 1)
+	path := strings.Replace(context.Request().URL.String(), authRest.IgnoreRoute, "", 1)
+	path = strings.Replace(path, "/", "", 1)
 	strategyFunc, ok := strategy.Functions[path]
 	if !ok {
 		return errors.New("Can't find route: " + path)

@@ -24,32 +24,46 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 		// Wrong host, correct route
 		{
 			Host:           "wrongHost",
-			Route:          "NewUser",
+			Route:          "/NewUser",
 			ExpectedResult: false,
 		},
 		// Correct host, but wrong host
 		{
 			Host:           "fino.digital",
-			Route:          "WrongRoute",
+			Route:          "/WrongRoute",
 			ExpectedResult: false,
 		},
 		// correct host, correct route, but without body:
 		{
 			Host:           "fino.digital",
-			Route:          "NewUser",
+			Route:          "/NewUser",
 			ExpectedResult: false,
+		},
+		// correct host, correct route, and ignore route:
+		{
+			Host:           "fino.digital",
+			Route:          "/ignoreme/NewUser",
+			ExpectedResult: true,
+			Body:           map[string]interface{}{"body": "correct"},
+		},
+		// correct host, correct route, and wrong ignore-route:
+		{
+			Host:           "fino.digital",
+			Route:          "/ignoremeNOT/NewUser",
+			ExpectedResult: false,
+			Body:           map[string]interface{}{"body": "correct"},
 		},
 		// correct host, correct route, but wrong body
 		// CURRENTLY NOT IMPLEMENTED
 		{
 			Host:           "fino.digital",
-			Route:          "NewUser",
+			Route:          "/NewUser",
 			Body:           map[string]interface{}{"body": "wrongBody"},
 			ExpectedResult: true,
 		},
 	}
 
-	for _, data := range testData {
+	for i, data := range testData {
 		strategies := map[string]dynamicUserAuth.Strategy{"fino.digital": dynamicUserAuth.Strategy{
 			Functions: map[string]dynamicUserAuth.StrategyFunction{
 				"NewUser": dynamicUserAuth.StrategyFunction{
@@ -59,7 +73,7 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 				},
 			},
 		}}
-		rest := restUserAuth.AuthRest{UserAuth: dynamicUserAuth.DynamicUserAuth{Stragegies: strategies}}
+		rest := restUserAuth.AuthRest{UserAuth: dynamicUserAuth.DynamicUserAuth{Stragegies: strategies}, IgnoreRoute: "/ignoreme"}
 
 		// read body if there is something
 		var reader io.Reader
@@ -70,7 +84,7 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 
 		// build router and requet
 		router := echo.New()
-		req := httptest.NewRequest(echo.POST, "/NewUser", reader)
+		req := httptest.NewRequest(echo.POST, data.Route, reader)
 		req.Host = data.Host
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		context := router.NewContext(req, httptest.NewRecorder())
@@ -78,7 +92,7 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 		// call handler
 		err := rest.Handle(context)
 		if (err != nil) == data.ExpectedResult {
-			log.Println(err)
+			log.Println(i, err)
 			t.Fail()
 		}
 	}
