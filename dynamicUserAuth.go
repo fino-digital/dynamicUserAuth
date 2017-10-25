@@ -1,7 +1,7 @@
 package dynamicUserAuth
 
 import (
-	"errors"
+	"net/http"
 	"reflect"
 
 	"github.com/labstack/echo"
@@ -74,6 +74,6 @@ func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 			}
 			return next(context)
 		}
-		return errors.New("can't find strategy")
+		return context.JSON(http.StatusUnauthorized, "can't find strategy")
 	}
 }
