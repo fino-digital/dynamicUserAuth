@@ -59,7 +59,7 @@ func TestAllowedAddrSet(t *testing.T) {
 		AuthorizeUser: func(c echo.Context) error {
 			return errors.New("it shouldn't pass this function")
 		},
-		AllowedAddrSet: map[string]struct{}{"192.0.2.1:1234": {}},
+		AllowedAddrSet: map[string]struct{}{"192.0.2.1": {}},
 	}
 
 	// new middleware
