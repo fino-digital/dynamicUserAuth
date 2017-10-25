@@ -60,7 +60,7 @@ func TestAllowedException(t *testing.T) {
 			return errors.New("it shouldn't pass this function")
 		},
 		Exception: func(c echo.Context) bool {
-			return false
+			return true
 		},
 	}
 

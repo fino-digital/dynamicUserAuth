@@ -64,9 +64,10 @@ func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 		// - If you find a better way, plz go for it!
 		if strategy, ok := authMiddleware.dynamicUserAuth.Stragegies[host]; ok {
 			if !(strategy.Exception == nil || !strategy.Exception(context)) {
-				if err := strategy.AuthorizeUser(context); err != nil {
-					return err
-				}
+				return next(context)
+			}
+			if err := strategy.AuthorizeUser(context); err != nil {
+				return err
 			}
 			return next(context)
 		}
