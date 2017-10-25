@@ -3,7 +3,6 @@ package dynamicUserAuth
 import (
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/labstack/echo"
 )
@@ -37,32 +36,15 @@ type StrategyFunction struct {
 // Strategy represent a strategy for one product.
 // Implement a new strategy for a new product
 type Strategy struct {
-	Functions      map[string]StrategyFunction
-	AuthorizeUser  echo.HandlerFunc
-	AllowedAddrSet map[string]struct{}
-}
-
-// WithoutAuth checks if there is an address wich is allowed to pass without handle-check
-func (strategy *Strategy) WithoutAuth(remoteAddr string) bool {
-	_, ok := strategy.AllowedAddrSet[remoteAddr]
-	return ok
+	Functions     map[string]StrategyFunction
+	AuthorizeUser echo.HandlerFunc
+	Exception     func(echo.Context) bool
 }
 
 // AuthMiddleware is the middleare for all auth-stuff.
 type AuthMiddleware struct {
 	dynamicUserAuth *DynamicUserAuth
 	IgnoreLocalhost bool
-}
-
-// localhostAllowed check if remoteAddr is one of localhost-address
-func (authMiddleware *AuthMiddleware) localhostAllowed(remoteAddr string) bool {
-	localhostAddresses := map[string]struct{}{
-		"localhost": {},
-		"192.0.2.1": {},
-		"::1":       {},
-	}
-	_, ok := localhostAddresses[remoteAddr]
-	return ok
 }
 
 // NewAuthMiddleware creates a new authMiddleware.
@@ -75,18 +57,13 @@ func NewAuthMiddleware(dynamicUserAuth *DynamicUserAuth) *AuthMiddleware {
 // Use this for all save-endpoints.
 func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(context echo.Context) error {
-		ipAddress := strings.Split(context.Request().RemoteAddr, ":")[0]
-		// check if call is localhost and localhost is allowed
-		if authMiddleware.IgnoreLocalhost && authMiddleware.localhostAllowed(ipAddress) {
-			return next(context)
-		}
 		// check host
 		host := context.Request().Host
 		// Check first if strategy for this host exist.
 		// If-else-construct is confused (`return next(context)` should be at the end).
 		// - If you find a better way, plz go for it!
 		if strategy, ok := authMiddleware.dynamicUserAuth.Stragegies[host]; ok {
-			if !strategy.WithoutAuth(ipAddress) {
+			if !(strategy.Exception == nil || !strategy.Exception(context)) {
 				if err := strategy.AuthorizeUser(context); err != nil {
 					return err
 				}
