@@ -41,27 +41,43 @@ type Strategy struct {
 	AllowedAddrSet map[string]struct{}
 }
 
-// AuthMiddleware is the middleare for all auth-stuff.
-type AuthMiddleware struct {
-	dynamicUserAuth *DynamicUserAuth
-}
-
 // WithoutAuth checks if there is an address wich is allowed to pass without handle-check
 func (strategy *Strategy) WithoutAuth(remoteAddr string) bool {
 	_, ok := strategy.AllowedAddrSet[remoteAddr]
 	return ok
 }
 
+// AuthMiddleware is the middleare for all auth-stuff.
+type AuthMiddleware struct {
+	dynamicUserAuth *DynamicUserAuth
+	IgnoreLocalhost bool
+}
+
+// localhostAllowed check if remoteAddr is one of localhost-address
+func (authMiddleware *AuthMiddleware) localhostAllowed(remoteAddr string) bool {
+	localhostAddresses := map[string]struct{}{
+		"localhost": {},
+		"192.0.2.1": {},
+	}
+	_, ok := localhostAddresses[remoteAddr]
+	return ok
+}
+
 // NewAuthMiddleware creates a new authMiddleware.
 // this function is here to force to get all requirements
 func NewAuthMiddleware(dynamicUserAuth *DynamicUserAuth) *AuthMiddleware {
-	return &AuthMiddleware{dynamicUserAuth: dynamicUserAuth}
+	return &AuthMiddleware{dynamicUserAuth: dynamicUserAuth, IgnoreLocalhost: false}
 }
 
 // Handle handles the auth-process.
 // Use this for all save-endpoints.
 func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(context echo.Context) error {
+		// check if call is localhost and localhost is allowed
+		if authMiddleware.IgnoreLocalhost && authMiddleware.localhostAllowed(context.RealIP()) {
+			return next(context)
+		}
+		// check host
 		host := context.Request().Host
 		// Check first if strategy for this host exist.
 		// If-else-construct is confused (`return next(context)` should be at the end).

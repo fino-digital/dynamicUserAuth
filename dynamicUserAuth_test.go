@@ -77,3 +77,38 @@ func TestAllowedAddrSet(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestLocalhostIsAllowed(t *testing.T) {
+	// Init TestServer
+	targetFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, client")
+	})
+	testServer := httptest.NewServer(targetFunc)
+	host := "fino.digital"
+	testServer.URL = "http://" + host
+	defer testServer.Close()
+
+	// build up a testStrategy
+	testStrategy := dynamicUserAuth.Strategy{
+		AuthorizeUser: func(c echo.Context) error {
+			return errors.New("it shouldn't pass this function")
+		},
+	}
+
+	// new middleware
+	authMiddleware := dynamicUserAuth.NewAuthMiddleware(&dynamicUserAuth.DynamicUserAuth{Stragegies: dynamicUserAuth.Stragegies{host: testStrategy}})
+	authMiddleware.IgnoreLocalhost = true
+
+	// build request
+	router := echo.New()
+	request := httptest.NewRequest(echo.GET, testServer.URL, nil)
+	request.Header.Add("X-Real-IP", "localhost")
+	rec := httptest.NewRecorder()
+	context := router.NewContext(request, rec)
+
+	// TEST
+	err := authMiddleware.Handle(echo.WrapHandler(targetFunc))(context)
+	if err != nil {
+		t.Error(err)
+	}
+}
