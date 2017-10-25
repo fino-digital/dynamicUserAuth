@@ -67,7 +67,7 @@ func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 		// If-else-construct is confused (`return next(context)` should be at the end).
 		// - If you find a better way, plz go for it!
 		if strategy, ok := authMiddleware.dynamicUserAuth.Stragegies[host]; ok {
-			if !strategy.WithoutAuth(context.Request().RemoteAddr) {
+			if !strategy.WithoutAuth(context.RealIP()) {
 				if err := strategy.AuthorizeUser(context); err != nil {
 					return err
 				}
