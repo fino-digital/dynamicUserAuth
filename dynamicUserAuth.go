@@ -58,6 +58,7 @@ func (authMiddleware *AuthMiddleware) localhostAllowed(remoteAddr string) bool {
 	localhostAddresses := map[string]struct{}{
 		"localhost": {},
 		"192.0.2.1": {},
+		"::1":       {},
 	}
 	_, ok := localhostAddresses[remoteAddr]
 	return ok
