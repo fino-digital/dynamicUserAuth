@@ -3,6 +3,7 @@ package dynamicUserAuth
 import (
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/labstack/echo"
 )
@@ -74,8 +75,9 @@ func NewAuthMiddleware(dynamicUserAuth *DynamicUserAuth) *AuthMiddleware {
 // Use this for all save-endpoints.
 func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(context echo.Context) error {
+		ipAddress := strings.Split(context.Request().RemoteAddr, ":")[0]
 		// check if call is localhost and localhost is allowed
-		if authMiddleware.IgnoreLocalhost && authMiddleware.localhostAllowed(context.RealIP()) {
+		if authMiddleware.IgnoreLocalhost && authMiddleware.localhostAllowed(ipAddress) {
 			return next(context)
 		}
 		// check host
@@ -84,7 +86,7 @@ func (authMiddleware *AuthMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 		// If-else-construct is confused (`return next(context)` should be at the end).
 		// - If you find a better way, plz go for it!
 		if strategy, ok := authMiddleware.dynamicUserAuth.Stragegies[host]; ok {
-			if !strategy.WithoutAuth(context.RealIP()) {
+			if !strategy.WithoutAuth(ipAddress) {
 				if err := strategy.AuthorizeUser(context); err != nil {
 					return err
 				}
