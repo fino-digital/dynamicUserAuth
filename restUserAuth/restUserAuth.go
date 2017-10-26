@@ -1,7 +1,6 @@
 package restUserAuth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -21,7 +20,7 @@ func (authRest *AuthRest) Handle(context echo.Context) error {
 	host := context.Request().Host
 	strategy, ok := authRest.UserAuth.Stragegies[host]
 	if !ok {
-		return errors.New("Can't find host: " + host)
+		return context.JSON(http.StatusMethodNotAllowed, "Can't find host: "+host)
 	}
 
 	// find correct function
@@ -29,19 +28,19 @@ func (authRest *AuthRest) Handle(context echo.Context) error {
 	path = strings.Replace(path, "/", "", 1)
 	strategyFunc, ok := strategy.Functions[path]
 	if !ok {
-		return errors.New("Can't find route: " + path)
+		return context.JSON(http.StatusMethodNotAllowed, "Can't find route: "+path)
 	}
 
 	// get body
 	requestMap := new(map[string]interface{})
 	if err := context.Bind(requestMap); err != nil {
-		return err
+		return context.JSON(http.StatusMethodNotAllowed, err)
 	}
 
 	// call resolve of function
 	returnInterf, err := strategyFunc.Resolve(context, (*requestMap))
 	if err != nil {
-		return err
+		return context.JSON(http.StatusMethodNotAllowed, err)
 	}
 
 	return context.JSON(http.StatusOK, returnInterf)
