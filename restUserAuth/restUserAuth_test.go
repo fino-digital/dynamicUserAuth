@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -19,51 +19,50 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 		Host           string
 		Route          string
 		Body           map[string]interface{}
-		ExpectedResult bool
+		ExpectedResult int
 	}{
 		// Wrong host, correct route
 		{
 			Host:           "wrongHost",
-			Route:          "/NewUser",
-			ExpectedResult: false,
+			Route:          "/ignoreme/NewUser",
+			ExpectedResult: restUserAuth.StatusNoHost,
 		},
-		// Correct host, but wrong host
+		// Correct host, but wrong route
 		{
 			Host:           "fino.digital",
 			Route:          "/WrongRoute",
-			ExpectedResult: false,
+			ExpectedResult: http.StatusNotFound,
+		},
+		// Correct host, but wrong route
+		{
+			Host:           "fino.digital",
+			Route:          "/ignoreme/WrongRoute",
+			ExpectedResult: restUserAuth.StatusNoFunction,
 		},
 		// correct host, correct route, but without body:
 		{
 			Host:           "fino.digital",
-			Route:          "/NewUser",
-			ExpectedResult: false,
+			Route:          "/ignoreme/NewUser",
+			ExpectedResult: http.StatusMethodNotAllowed,
 		},
-		// correct host, correct route, and ignore route:
+		// correct host, correct route
 		{
 			Host:           "fino.digital",
 			Route:          "/ignoreme/NewUser",
-			ExpectedResult: true,
-			Body:           map[string]interface{}{"body": "correct"},
-		},
-		// correct host, correct route, and wrong ignore-route:
-		{
-			Host:           "fino.digital",
-			Route:          "/ignoremeNOT/NewUser",
-			ExpectedResult: false,
+			ExpectedResult: http.StatusOK,
 			Body:           map[string]interface{}{"body": "correct"},
 		},
 		// correct host, correct route, but wrong body
 		// CURRENTLY NOT IMPLEMENTED
 		{
 			Host:           "fino.digital",
-			Route:          "/NewUser",
+			Route:          "/ignoreme/NewUser",
 			Body:           map[string]interface{}{"body": "wrongBody"},
-			ExpectedResult: true,
+			ExpectedResult: http.StatusOK,
 		},
 	}
 
-	for i, data := range testData {
+	for testDataIndex, data := range testData {
 		strategies := map[string]dynamicUserAuth.Strategy{"fino.digital": dynamicUserAuth.Strategy{
 			Functions: map[string]dynamicUserAuth.StrategyFunction{
 				"NewUser": dynamicUserAuth.StrategyFunction{
@@ -73,7 +72,10 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 				},
 			},
 		}}
-		rest := restUserAuth.AuthRest{UserAuth: dynamicUserAuth.DynamicUserAuth{Stragegies: strategies}, IgnoreRoute: "/ignoreme"}
+
+		router := echo.New()
+		rest := restUserAuth.AuthRest{UserAuth: dynamicUserAuth.DynamicUserAuth{Stragegies: strategies}}
+		router.Any("/ignoreme"+restUserAuth.ParamFunction, rest.Handle)
 
 		// read body if there is something
 		var reader io.Reader
@@ -83,17 +85,16 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 		}
 
 		// build router and requet
-		router := echo.New()
 		req := httptest.NewRequest(echo.POST, data.Route, reader)
 		req.Host = data.Host
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		context := router.NewContext(req, httptest.NewRecorder())
+		rec := httptest.NewRecorder()
 
-		// call handler
-		err := rest.Handle(context)
-		if (err != nil) == data.ExpectedResult {
-			log.Println(i, err)
-			t.Fail()
+		router.ServeHTTP(rec, req)
+
+		if rec.Result().StatusCode != data.ExpectedResult {
+			t.Errorf("[%d] Actual StatusCode: %d but expected: %d; With body: %s",
+				testDataIndex, rec.Result().StatusCode, data.ExpectedResult, rec.Body.String())
 		}
 	}
 
