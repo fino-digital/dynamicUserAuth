@@ -43,7 +43,7 @@ func TestRestUserAuthHostCheck(t *testing.T) {
 		{
 			Host:           "fino.digital",
 			Route:          "/ignoreme/NewUser",
-			ExpectedResult: http.StatusMethodNotAllowed,
+			ExpectedResult: http.StatusBadRequest,
 		},
 		// correct host, correct route
 		{

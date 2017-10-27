@@ -44,7 +44,7 @@ func (authRest *AuthRest) Handle(context echo.Context) error {
 	// get body
 	requestMap := new(map[string]interface{})
 	if err := context.Bind(requestMap); err != nil {
-		return context.JSON(http.StatusMethodNotAllowed, err)
+		return context.JSON(http.StatusBadRequest, "Please respect params")
 	}
 
 	// call resolve of function
